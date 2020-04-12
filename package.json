@@ -1,0 +1,11 @@
+{
+  "devDependencies": {
+    "elm-hot": "^1.1.4",
+    "node-elm-compiler": "^5.0.4"
+  },
+  "dependencies": {
+    "elm-analyse": "^0.16.5",
+    "elm-format": "^0.8.3",
+    "eslint_d": "^8.1.1"
+  }
+}
