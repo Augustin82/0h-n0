@@ -1,6 +1,8 @@
 module Main exposing (main)
 
+import Animator
 import Browser
+import Color
 import Dict exposing (Dict)
 import Element exposing (..)
 import Element.Background as Background
@@ -19,7 +21,13 @@ type alias Model =
     , size : Int
     , seed : Random.Seed
     , debug : Bool
+    , state : Animator.Timeline State
     }
+
+
+type State
+    = Loading
+    | Ready
 
 
 type alias Grid =
@@ -57,6 +65,7 @@ type Msg
     = ToggleSquare String
     | ToggleDebug
     | GotSeed Random.Seed
+    | Tick Time.Posix
 
 
 toggleSquare : Square -> Square
@@ -76,7 +85,7 @@ toggleSquare ({ state } as square) =
 
 
 view : Model -> Html Msg
-view { size, grid, debug } =
+view { size, grid, debug, state } =
     layout
         [ height fill
         , width fill
@@ -96,9 +105,131 @@ view { size, grid, debug } =
               <|
                 text <|
                     coordsToLabel size size
-            , el [ centerX, centerY ] <|
-                viewGrid debug size grid
+            , if Animator.current state == Ready then
+                el [ centerX, centerY ] <|
+                    viewGrid debug size grid
+
+              else
+                spinner state
             ]
+
+
+toColor : Color.Color -> Color
+toColor color =
+    color
+        |> Color.toRgba
+        |> fromRgb
+
+
+fromColor : Color -> Color.Color
+fromColor color =
+    color
+        |> toRgb
+        |> Color.fromRgba
+
+
+spinner : Animator.Timeline State -> Element Msg
+spinner state =
+    let
+        color =
+            toColor <|
+                Animator.color state
+                    (\s ->
+                        case s of
+                            Ready ->
+                                fromColor blue
+
+                            Loading ->
+                                fromColor red
+                    )
+
+        leftOffset =
+            Animator.move state
+                (\s ->
+                    case s of
+                        Ready ->
+                            Animator.at 0
+
+                        Loading ->
+                            Animator.interpolate (leaveLate 0.1 0 200)
+                                |> Animator.loop (Animator.millis 3000)
+                )
+
+        rightOffset =
+            Animator.move state
+                (\s ->
+                    case s of
+                        Ready ->
+                            Animator.at 0
+
+                        Loading ->
+                            Animator.interpolate (hangEnd 0.1 30 230)
+                                |> Animator.loop (Animator.millis 3000)
+                )
+
+        w =
+            rightOffset
+                - leftOffset
+                |> round
+    in
+    column [ spacing 20, Font.color white, centerX, height fill, moveDown 50 ]
+        [ el [ centerX ] <| text "Chargement..."
+        , el [ width <| px 230 ] <|
+            el
+                [ Border.rounded 15
+                , Border.color color
+                , Background.color color
+                , width <| px w
+                , height <| px 30
+                , moveRight <| leftOffset
+                ]
+            <|
+                text "\u{00A0}"
+        ]
+
+
+leaveLate late start end progress =
+    let
+        total =
+            end - start
+    in
+    if progress <= late then
+        start
+
+    else if progress <= 0.5 then
+        start + (((progress - late) * 2 * (0.5 / (0.5 - late))) * total)
+
+    else if progress <= 1 - late then
+        start + ((1 - (progress - 0.5) * 2 * (0.5 / (0.5 - late))) * total)
+
+    else
+        start
+
+
+hangEnd time start end progress =
+    let
+        total =
+            end - start
+    in
+    if progress <= (0.5 - time) then
+        start + (total * progress * 2 * (0.5 / (0.5 - time)))
+
+    else if progress <= (0.5 + time) then
+        end
+
+    else
+        start + ((1 - (2 * (0.5 / (0.5 - time)) * (progress - 0.5 - time))) * total)
+
+
+animator : Animator.Animator Model
+animator =
+    Animator.animator
+        |> Animator.watchingWith
+            .state
+            (\newState model ->
+                { model | state = newState }
+            )
+            (\state -> state == Loading)
 
 
 black : Color
@@ -251,6 +382,12 @@ buildEmptyGrid size =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        Tick newTime ->
+            ( model
+                |> Animator.update newTime animator
+            , Cmd.none
+            )
+
         ToggleDebug ->
             ( { model | debug = not model.debug }, Cmd.none )
 
@@ -436,13 +573,18 @@ updateSquare fn label model =
 
 
 subs : Model -> Sub Msg
-subs _ =
-    Sub.none
+subs model =
+    Animator.toSubscription Tick model animator
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { grid = buildEmptyGrid 7, size = 7, seed = Random.initialSeed 42, debug = False }
+    ( { grid = buildEmptyGrid 7
+      , size = 7
+      , seed = Random.initialSeed 42
+      , debug = False
+      , state = Animator.init Loading
+      }
     , Time.now
         |> Task.map (Time.posixToMillis >> Random.initialSeed)
         |> Task.perform GotSeed
