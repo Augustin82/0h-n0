@@ -1,7 +1,15 @@
 {
+  "name": "0h-n0",
+  "version": "0.0.1",
+  "description": "0h-n0 clone",
+  "author": "@Augustin82",
+  "scripts": {
+    "build": "yarn parcel build index.html ./dist"
+  },
   "devDependencies": {
     "elm-hot": "^1.1.4",
-    "node-elm-compiler": "^5.0.4"
+    "node-elm-compiler": "^5.0.4",
+    "parcel-bundler": "^1.12.4"
   },
   "dependencies": {
     "elm-analyse": "^0.16.5",
