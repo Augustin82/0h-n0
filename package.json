@@ -4,16 +4,16 @@
   "description": "0h-n0 clone",
   "author": "@Augustin82",
   "scripts": {
+    "prebuild": "yarn install",
     "build": "yarn parcel build index.html ./dist"
   },
   "devDependencies": {
+    "elm-analyse": "^0.16.5",
+    "elm-format": "^0.8.3",
     "elm-hot": "^1.1.4",
+    "eslint_d": "^8.1.1",
     "node-elm-compiler": "^5.0.4",
     "parcel-bundler": "^1.12.4"
   },
-  "dependencies": {
-    "elm-analyse": "^0.16.5",
-    "elm-format": "^0.8.3",
-    "eslint_d": "^8.1.1"
-  }
+  "dependencies": {}
 }
