@@ -4,7 +4,6 @@
   "description": "0h-n0 clone",
   "author": "@Augustin82",
   "scripts": {
-    "prebuild": "yarn install",
     "build": "yarn parcel build index.html ./dist"
   },
   "devDependencies": {
